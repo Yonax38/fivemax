@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fivemax</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#241a5e">
+<meta name="description" content="Fivemax — la grande course ! Un jeu de course sans fin en 3D pour toute la famille.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="game"></canvas>
+  <canvas id="fx"></canvas>
+
+  <!-- HUD en jeu -->
+  <div id="hud" class="hidden">
+    <div class="hud-box hud-score"><span id="hud-score">0</span><small>points</small></div>
+    <div class="hud-box hud-coins">🪙 <span id="hud-coins">0</span></div>
+    <button id="btn-pause" class="btn round" title="Pause">⏸</button>
+    <div id="hud-power"></div>
+  </div>
+  <div id="hint" class="hidden">
+    <div class="hint-row"><span class="key">←</span><span class="key">→</span> changer de voie</div>
+    <div class="hint-row"><span class="key">↑</span> sauter</div>
+    <div class="hint-row"><span class="key">↓</span> se baisser</div>
+    <div class="hint-touch">glisse le doigt, ou joue à la manette 🎮</div>
+  </div>
+  <div id="banner" class="hidden"></div>
+  <div id="pad-badge" class="hidden">🎮</div>
+
+  <!-- Menu principal -->
+  <div id="screen-menu" class="screen hidden">
+    <div class="menu-bg">
+      <div class="menu-glow"></div>
+      <div class="menu-stars"></div>
+    </div>
+    <canvas id="menu-hero" width="600" height="720"></canvas>
+    <div class="menu-ring"></div>
+    <div class="logo">
+      <span class="logo-main"><span>F</span><span>I</span><span>V</span><span>E</span><span>M</span><span>A</span><span>X</span></span>
+      <span class="logo-sub">✨ La grande course ! ✨</span>
+    </div>
+    <div class="menu-buttons">
+      <button id="btn-play" class="btn big green">▶ JOUER</button>
+      <button id="btn-wardrobe" class="btn blue">🎽 Vestiaire <span id="menu-unlock-tag" class="pill"></span></button>
+    </div>
+    <div class="corner tl"><div class="hud-box">🏆 Record : <b id="menu-best">0</b></div></div>
+    <div class="corner tr"><div class="hud-box">🪙 <b class="coin-total">0</b></div></div>
+    <div class="corner bl">
+      <button id="btn-music" class="btn round" title="Musique">🎵</button>
+      <button id="btn-sfx" class="btn round" title="Sons et voix">🔊</button>
+      <button id="btn-full" class="btn round" title="Plein écran">⛶</button>
+      <button id="btn-reset" class="btn small red" title="Effacer la progression">🗑️ Repartir de zéro</button>
+    </div>
+    <div class="corner br menu-help">⬅➡⬆⬇ ou glisse le doigt · 🎮 manette compatible</div>
+    <button id="btn-install" class="btn small green install-btn hidden">📲 Installer l'appli</button>
+  </div>
+
+  <!-- Vestiaire -->
+  <div id="screen-wardrobe" class="screen hidden">
+    <div class="wardrobe-head">
+      <button id="btn-wback" class="btn blue">◀ Retour</button>
+      <h2>Choisis ton héros <small id="unlock-count"></small></h2>
+      <div class="hud-box">🪙 <b class="coin-total">0</b></div>
+    </div>
+    <div class="carousel-wrap">
+      <button id="car-prev" class="btn round">◀</button>
+      <div id="cards" class="cards"></div>
+      <button id="car-next" class="btn round">▶</button>
+    </div>
+    <div class="detail">
+      <div class="stage-box">
+        <canvas id="big" width="580" height="680"></canvas>
+        <div id="big-lock" class="big-lock hidden">🔒</div>
+      </div>
+      <div class="info">
+        <div id="info-name" class="iname"></div>
+        <div id="info-desc" class="idesc"></div>
+        <div id="info-action" class="iaction"></div>
+        <button id="btn-wplay" class="btn big green">▶ JOUER</button>
+      </div>
+      <div class="outfit-col">
+        <div class="outfit-title" id="outfit-title">Tenues</div>
+        <div id="outfits" class="outfits"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pause -->
+  <div id="screen-pause" class="screen dim hidden">
+    <div class="panel">
+      <h2>Pause</h2>
+      <button id="btn-resume" class="btn big green">▶ Reprendre</button>
+      <button id="btn-pmenu" class="btn blue">🏠 Menu</button>
+      <div class="row">
+        <button id="btn-music2" class="btn round" title="Musique">🎵</button>
+        <button id="btn-sfx2" class="btn round" title="Sons et voix">🔊</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fin de partie -->
+  <div id="screen-over" class="screen dim hidden">
+    <div class="panel">
+      <h2 id="over-title">Aïe !</h2>
+      <div id="over-record" class="record hidden">⭐ Nouveau record ! ⭐</div>
+      <div class="stats">
+        <div><span>Distance</span><b id="over-dist">0 m</b></div>
+        <div><span>Pièces</span><b id="over-coins">0</b></div>
+        <div><span>Record</span><b id="over-best">0</b></div>
+        <div class="total"><span>Score</span><b id="over-score">0</b></div>
+      </div>
+      <button id="btn-again" class="btn big green">↻ Rejouer</button>
+      <div class="row">
+        <button id="btn-omenu" class="btn blue">🏠 Menu</button>
+        <button id="btn-owardrobe" class="btn blue">🎽 Vestiaire</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation : tout effacer -->
+  <div id="screen-confirm" class="screen dim hidden">
+    <div class="panel">
+      <h2>⚠️ Attention !</h2>
+      <p class="confirm-text">Tu vas <b>tout effacer</b> : tes pièces, tes héros débloqués, tes tenues et ton record.<br>Cette action est <b>définitive</b>.</p>
+      <button id="btn-keep" class="btn big green">Non, je garde tout</button>
+      <button id="btn-wipe" class="btn red">🗑️ Oui, tout effacer</button>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden"></div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/characters.js"></script>
+<script src="js/game3d.js"></script>
+<script src="js/world.js"></script>
+<script src="js/game.js"></script>
+<script>
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+</body>
+</html>
