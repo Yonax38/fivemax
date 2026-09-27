@@ -188,11 +188,39 @@ FM.CHARS = [
   }
 ];
 
+// 23 véhicules complètement décalés à débloquer (aucune tenue : un seul modèle chacun)
+FM.VEHICLES = [
+  { key: 'stroller', name: 'Poussette', desc: 'Pratique... pour un bébé', cost: 300 },
+  { key: 'cart', name: 'Caddie', desc: 'Direct sorti du supermarché', cost: 500 },
+  { key: 'vacuum', name: 'Aspirateur', desc: 'Glisse et avale la poussière', cost: 700 },
+  { key: 'scooter', name: 'Trottinette', desc: 'Un classique de la cour de récré', cost: 900 },
+  { key: 'skateboard', name: 'Planche à roulettes', desc: 'Petite mais qui envoie', cost: 1100 },
+  { key: 'wheelbarrow', name: 'Brouette', desc: 'Empruntée au jardin', cost: 1400 },
+  { key: 'suitcase', name: 'Valise à roulettes', desc: 'Prête pour l\'aéroport', cost: 1700 },
+  { key: 'officechair', name: 'Fauteuil de bureau', desc: 'Roulettes en folie', cost: 2000 },
+  { key: 'mower', name: 'Tondeuse à gazon', desc: 'Vroum vroum sur la piste', cost: 2400 },
+  { key: 'dolly', name: 'Diable de déménageur', desc: 'Fait pour transporter... toi', cost: 2800 },
+  { key: 'bathtub', name: 'Baignoire', desc: 'Bain de vitesse garanti', cost: 3300 },
+  { key: 'sofa', name: 'Canapé', desc: 'Le confort avant tout', cost: 3800 },
+  { key: 'piano', name: 'Piano à roulettes', desc: 'Une course en musique', cost: 4400 },
+  { key: 'rockinghorse', name: 'Cheval à bascule', desc: 'Dada, mais rapide', cost: 5000 },
+  { key: 'kart', name: 'Kart à pédales', desc: 'Le vrai esprit course', cost: 5700 },
+  { key: 'bumpercar', name: 'Voiture tamponneuse', desc: 'Ça tape, ça fonce', cost: 6500 },
+  { key: 'dragonfloat', name: 'Dragon gonflable', desc: 'Tout droit sorti de la piscine', cost: 7400 },
+  { key: 'carpet', name: 'Tapis volant', desc: 'Un peu de magie sur la piste', cost: 8400 },
+  { key: 'carriage', name: 'Carrosse royal', desc: 'Une arrivée très chic', cost: 9500 },
+  { key: 'walker', name: 'Robot marcheur', desc: 'Un pilote mécanique', cost: 10800 },
+  { key: 'saucer', name: 'Soucoupe volante', desc: 'Droit venue de l\'espace', cost: 12200 },
+  { key: 'rocketsled', name: 'Traîneau fusée', desc: 'Ça glisse à toute vitesse', cost: 13800 },
+  { key: 'rocket', name: 'Fusée miniature', desc: 'Le bolide ultime !', cost: 15600 }
+];
+
 FM.SAVE_KEY = 'fivemax_save_v1';
 
 FM.defaultSave = function () {
-  const s = { coins: 0, best: 0, selected: 'boy', unlocked: {}, owned: {}, equipped: {}, music: true, sfx: true, runs: 0 };
+  const s = { coins: 0, best: 0, selected: 'boy', unlocked: {}, owned: {}, equipped: {}, music: true, sfx: true, runs: 0, selectedVehicle: 'none', vehicleUnlocked: {} };
   FM.CHARS.forEach((c) => { s.unlocked[c.key] = c.cost === 0; s.owned[c.key] = [true, false, false]; s.equipped[c.key] = 0; });
+  FM.VEHICLES.forEach((v) => { s.vehicleUnlocked[v.key] = false; });
   return s;
 };
 
@@ -205,7 +233,8 @@ FM.loadSave = function () {
       return Object.assign(d, s, {
         unlocked: Object.assign(d.unlocked, s.unlocked),
         owned: Object.assign(d.owned, s.owned),
-        equipped: Object.assign(d.equipped, s.equipped)
+        equipped: Object.assign(d.equipped, s.equipped),
+        vehicleUnlocked: Object.assign(d.vehicleUnlocked, s.vehicleUnlocked)
       });
     }
   } catch (e) { /* stockage indisponible : on joue quand même */ }

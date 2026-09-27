@@ -111,6 +111,13 @@ body { font-family: "Trebuchet MS", "Segoe UI", "Arial Rounded MT Bold", sans-se
 .wardrobe-head { position: absolute; left: 28px; right: 28px; top: 20px; display: flex; align-items: center; justify-content: space-between; }
 .wardrobe-head h2 { font-size: 52px; font-weight: 900; text-shadow: 0 4px 0 #2a1560; letter-spacing: 1px; }
 .wardrobe-head h2 small { font-size: 22px; font-weight: 800; opacity: .85; display: block; text-align: center; margin-top: -6px; }
+.tabbar { display: flex; gap: 14px; background: rgba(0,0,0,.22); padding: 6px; border-radius: 30px; }
+.tabbar .tab {
+  font: inherit; font-weight: 900; font-size: 26px; color: #fff; opacity: .75; letter-spacing: .5px;
+  padding: 8px 26px; border: none; border-radius: 24px; background: transparent; cursor: pointer;
+}
+.tabbar .tab.active { opacity: 1; background: linear-gradient(#ffb43a, #ff8a00); box-shadow: 0 4px 0 #b85c00; }
+.unlock-line { position: absolute; left: 0; right: 0; top: 74px; text-align: center; font-size: 20px; font-weight: 800; opacity: .85; z-index: 2; }
 .carousel-wrap { position: absolute; left: 18px; right: 18px; top: 96px; height: 238px; display: flex; align-items: center; gap: 10px; }
 .carousel-wrap .btn.round { flex: none; }
 .cards { flex: 1; display: flex; gap: 16px; overflow-x: auto; scroll-behavior: smooth; padding: 14px 8px 22px; scrollbar-width: none; }

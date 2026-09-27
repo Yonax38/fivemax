@@ -1,5 +1,5 @@
 // Service worker : rend Fivemax installable et jouable hors connexion sur Android/navigateur.
-const CACHE = 'fivemax-v1';
+const CACHE = 'fivemax-v2';
 const ASSETS = [
   './', './index.html', './style.css', './manifest.json',
   './js/data.js', './js/audio.js', './js/characters.js', './js/game3d.js', './js/world.js', './js/game.js',

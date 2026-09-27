@@ -64,9 +64,13 @@
   <div id="screen-wardrobe" class="screen hidden">
     <div class="wardrobe-head">
       <button id="btn-wback" class="btn blue">◀ Retour</button>
-      <h2>Choisis ton héros <small id="unlock-count"></small></h2>
+      <div class="tabbar">
+        <button id="tab-hero" class="tab active">🏃 Héros</button>
+        <button id="tab-vehicle" class="tab">🚗 Véhicules</button>
+      </div>
       <div class="hud-box">🪙 <b class="coin-total">0</b></div>
     </div>
+    <div class="unlock-line"><small id="unlock-count"></small></div>
     <div class="carousel-wrap">
       <button id="car-prev" class="btn round">◀</button>
       <div id="cards" class="cards"></div>
@@ -83,7 +87,7 @@
         <div id="info-action" class="iaction"></div>
         <button id="btn-wplay" class="btn big green">▶ JOUER</button>
       </div>
-      <div class="outfit-col">
+      <div class="outfit-col" id="outfit-col">
         <div class="outfit-title" id="outfit-title">Tenues</div>
         <div id="outfits" class="outfits"></div>
       </div>

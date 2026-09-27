@@ -10,7 +10,7 @@
     objs: [], nextD: 0, coinsRun: 0, particles: [], rowIndex: 0,
     player: { lane: 0, prevLane: 0, x: 0, y: 0, vy: 0, slide: 0, slideOnLand: false, jumpBuf: 0, stumbleT: 0 },
     powers: { magnet: 0, shield: 0, jump: 0, slow: 0 },
-    invuln: 0, dead: false, falling: false, deadRot: 0, deadT: 0, charKey: 'boy', outfit: 0,
+    invuln: 0, dead: false, falling: false, deadRot: 0, deadT: 0, charKey: 'boy', outfit: 0, vehicle: 'none',
     lastPowerD: 0, themeShown: 0, recordShown: false, milestone: 0
   };
   window.FMG = G; // pratique pour déboguer (tests automatiques)
@@ -76,7 +76,7 @@
 
   function startGame() {
     FM.audio.unlock();
-    G.charKey = save.selected; G.outfit = save.equipped[save.selected] || 0;
+    G.charKey = save.selected; G.outfit = save.equipped[save.selected] || 0; G.vehicle = save.selectedVehicle || 'none';
     resetRun();
     G.mode = 'play';
     FM.audio.startMusic(G.themeShown);
@@ -97,7 +97,7 @@
   }
   function resetMenuWorld() {
     G.objs = []; G.dead = false; G.falling = false; G.deadRot = 0; G.powers = { magnet: 0, shield: 0, jump: 0, slow: 0 };
-    G.invuln = 0; G.shake = 0; G.particles = []; resetPlayer(); G.charKey = save.selected; G.outfit = save.equipped[save.selected] || 0;
+    G.invuln = 0; G.shake = 0; G.particles = []; resetPlayer(); G.charKey = save.selected; G.outfit = save.equipped[save.selected] || 0; G.vehicle = save.selectedVehicle || 'none';
     $('#hint').classList.add('hidden');
   }
   let coinsBanked = true;
@@ -423,21 +423,24 @@
     showScreen('over');
   }
 
-  // ---------- vestiaire ----------
-  let viewKey = save.selected, viewOutfit = 0, pendingBuy = null;
+  // ---------- vestiaire (héros + véhicules) ----------
+  let wardrobeTab = 'hero';
+  let viewKey = save.selected, viewOutfit = 0, viewVehicle = save.selectedVehicle || 'none', pendingBuy = null;
   const thumbCache = new Map(), thumbQueue = [];
   let thumbBusy = false;
   const fmt = (n) => n.toLocaleString('fr-FR');
   function el(tag, cls, html) { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
   function setPending(key) { pendingBuy = key; clearTimeout(setPending.h); if (key) setPending.h = setTimeout(() => { pendingBuy = null; if (G.mode === 'wardrobe') renderDetail(); }, 3500); }
   const charOf = (key) => FM.CHARS.find((c) => c.key === key) || FM.CHARS[0];
+  const vehicleList = () => [{ key: 'none', name: 'À pied', desc: "Cours sur tes deux jambes, comme d'habitude !", cost: 0 }].concat(FM.VEHICLES);
+  const vehicleOf = (key) => vehicleList().find((v) => v.key === key) || vehicleList()[0];
+  const vehicleUnlocked = (key) => key === 'none' || !!save.vehicleUnlocked[key];
 
-  // vignettes : dessinées une seule fois puis mises en mémoire
-  function makeThumb(key, outfit) {
-    // on dessine en grand, puis on recadre autour du personnage pour qu'il remplisse la vignette
+  // vignettes : dessinées une seule fois puis mises en mémoire (héros ou véhicule, même mécanique)
+  function makeThumbGeneric(draw) {
     const big = document.createElement('canvas'); big.width = 320; big.height = 320;
     const bc = big.getContext('2d', { willReadFrequently: true });
-    FM.drawChar(bc, key, outfit, { x: 160, y: 300, size: 260, pose: 'idle', view: 'front', t: 0.4, instant: true });
+    draw(bc);
     const px = bc.getImageData(0, 0, 320, 320).data;
     let x0 = 320, x1 = 0, y0 = 320, y1 = 0;
     for (let y = 0; y < 320; y++) for (let x = 0; x < 320; x++) if (px[(y * 320 + x) * 4 + 3] > 24) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
@@ -449,10 +452,9 @@
     }
     return out.toDataURL('image/png');
   }
-  function thumbInto(img, key, outfit) {
-    const id = key + ':' + outfit;
+  function thumbInto(img, id, draw) {
     if (thumbCache.has(id)) { img.src = thumbCache.get(id); return; }
-    thumbQueue.push({ img, key, outfit, id });
+    thumbQueue.push({ img, id, draw });
     if (!thumbBusy) pumpThumbs();
   }
   function pumpThumbs() {
@@ -460,11 +462,13 @@
     let n = 0;
     while (thumbQueue.length && n < 3) {
       const t = thumbQueue.shift();
-      if (!thumbCache.has(t.id)) thumbCache.set(t.id, makeThumb(t.key, t.outfit));
+      if (!thumbCache.has(t.id)) thumbCache.set(t.id, makeThumbGeneric(t.draw));
       t.img.src = thumbCache.get(t.id); n++;
     }
     if (thumbQueue.length) setTimeout(pumpThumbs, 16); else thumbBusy = false;
   }
+  const charThumb = (key, outfit) => (bc) => FM.drawChar(bc, key, outfit, { x: 160, y: 300, size: 260, pose: 'idle', view: 'front', t: 0.4, instant: true });
+  const vehicleThumb = (key) => (bc) => { if (key === 'none') FM.drawChar(bc, save.selected, save.equipped[save.selected] || 0, { x: 160, y: 300, size: 260, pose: 'idle', view: 'front', t: 0.4, instant: true }); else FM.drawVehicle(bc, key, { x: 160, y: 300, size: 190, view: 'front', t: 0.4 }); };
 
   function buyChar(ch) {
     if (pendingBuy !== 'c:' + ch.key) { setPending('c:' + ch.key); FM.audio.sfx('click'); renderDetail(); return; }
@@ -489,8 +493,39 @@
     if (save.unlocked[ch.key]) { save.selected = ch.key; FM.persist(); G.charKey = ch.key; G.outfit = viewOutfit; }
     buildWardrobe();
   }
+  function buyVehicle(v) {
+    if (pendingBuy !== 'v:' + v.key) { setPending('v:' + v.key); FM.audio.sfx('click'); renderDetail(); return; }
+    if (save.coins < v.cost) { FM.audio.sfx('nope'); toast('Il te manque ' + fmt(v.cost - save.coins) + ' pièces 🪙 — continue à courir !'); setPending(null); renderDetail(); return; }
+    save.coins -= v.cost; save.vehicleUnlocked[v.key] = true; save.selectedVehicle = v.key; viewVehicle = v.key; G.vehicle = v.key;
+    FM.persist(); FM.audio.sfx('unlock'); toast('🎉 ' + v.name + ' est débloqué !'); setPending(null);
+    refreshCoins(); buildWardrobe();
+  }
+  function selectVehicle(v) {
+    viewVehicle = v.key; setPending(null);
+    if (vehicleUnlocked(v.key)) { save.selectedVehicle = v.key; FM.persist(); G.vehicle = v.key; }
+    buildWardrobe();
+  }
+
+  function switchTab(tab) {
+    if (wardrobeTab === tab) return;
+    wardrobeTab = tab; setPending(null); FM.audio.sfx('click'); buildWardrobe();
+    scrollCarouselToViewing();
+  }
+  function scrollCarouselToViewing() {
+    const list = wardrobeTab === 'hero' ? FM.CHARS : vehicleList();
+    const key = wardrobeTab === 'hero' ? viewKey : viewVehicle;
+    const i = list.findIndex((x) => x.key === key), card = $('#cards').children[i];
+    if (card) { const cards = $('#cards'); cards.style.scrollBehavior = 'auto'; cards.scrollLeft = Math.max(0, card.offsetLeft - cards.clientWidth / 2 + 79); cards.style.scrollBehavior = ''; }
+  }
 
   function buildWardrobe() {
+    $('#tab-hero').classList.toggle('active', wardrobeTab === 'hero');
+    $('#tab-vehicle').classList.toggle('active', wardrobeTab === 'vehicle');
+    $('#outfit-col').classList.toggle('hidden', wardrobeTab !== 'hero');
+    if (wardrobeTab === 'hero') buildHeroCards(); else buildVehicleCards();
+  }
+
+  function buildHeroCards() {
     const cards = $('#cards');
     const keep = cards.scrollLeft;
     cards.innerHTML = '';
@@ -498,7 +533,7 @@
     FM.CHARS.forEach((ch) => {
       const unlocked = save.unlocked[ch.key]; if (unlocked) n++;
       const card = el('div', 'card' + (save.selected === ch.key ? ' selected' : '') + (unlocked ? '' : ' locked') + (viewKey === ch.key ? ' viewing' : ''));
-      const img = document.createElement('img'); img.alt = ch.name; thumbInto(img, ch.key, save.equipped[ch.key] || 0);
+      const img = document.createElement('img'); img.alt = ch.name; thumbInto(img, ch.key + ':' + (save.equipped[ch.key] || 0), charThumb(ch.key, save.equipped[ch.key] || 0));
       card.appendChild(img);
       card.appendChild(el('div', 'cname', ch.name));
       if (!unlocked) { card.appendChild(el('div', 'lock', '🔒')); card.appendChild(el('div', 'tag', '🪙 ' + fmt(ch.cost))); }
@@ -511,7 +546,30 @@
     renderDetail();
   }
 
-  function renderDetail() {
+  function buildVehicleCards() {
+    const cards = $('#cards');
+    const keep = cards.scrollLeft;
+    cards.innerHTML = '';
+    let n = 0;
+    vehicleList().forEach((v) => {
+      const unlocked = vehicleUnlocked(v.key); if (unlocked && v.key !== 'none') n++;
+      const card = el('div', 'card' + (save.selectedVehicle === v.key ? ' selected' : '') + (unlocked ? '' : ' locked') + (viewVehicle === v.key ? ' viewing' : ''));
+      const img = document.createElement('img'); img.alt = v.name; thumbInto(img, 'v:' + v.key, vehicleThumb(v.key));
+      card.appendChild(img);
+      card.appendChild(el('div', 'cname', v.name));
+      if (!unlocked) { card.appendChild(el('div', 'lock', '🔒')); card.appendChild(el('div', 'tag', '🪙 ' + fmt(v.cost))); }
+      else if (save.selectedVehicle === v.key) card.appendChild(el('div', 'tag ok', '✔ Choisi'));
+      card.onclick = () => { FM.audio.sfx('click'); selectVehicle(v); };
+      cards.appendChild(card);
+    });
+    cards.style.scrollBehavior = 'auto'; cards.scrollLeft = keep; cards.style.scrollBehavior = '';
+    $('#unlock-count').textContent = n + ' / ' + FM.VEHICLES.length + ' véhicules débloqués';
+    renderDetail();
+  }
+
+  function renderDetail() { if (wardrobeTab === 'hero') renderHeroDetail(); else renderVehicleDetail(); }
+
+  function renderHeroDetail() {
     const ch = charOf(viewKey), unl = save.unlocked[ch.key];
     $('#info-name').textContent = ch.name; $('#info-desc').textContent = ch.desc;
     $('#big-lock').classList.toggle('hidden', unl);
@@ -528,7 +586,7 @@
     ch.outfits.forEach((of, i) => {
       const owned = save.owned[ch.key][i], worn = save.equipped[ch.key] === i;
       const box = el('div', 'outfit' + (worn && unl ? ' selected' : '') + (owned && unl ? '' : ' locked') + (viewOutfit === i ? ' viewing' : ''));
-      const img = document.createElement('img'); img.alt = of.name; thumbInto(img, ch.key, i); box.appendChild(img);
+      const img = document.createElement('img'); img.alt = of.name; thumbInto(img, ch.key + ':' + i, charThumb(ch.key, i)); box.appendChild(img);
       box.appendChild(el('div', 'oname', of.name));
       let tag;
       if (!unl) tag = '<span>🔒</span>';
@@ -547,32 +605,52 @@
     });
   }
 
-  // grand aperçu animé du héros observé
+  function renderVehicleDetail() {
+    const v = vehicleOf(viewVehicle), unl = vehicleUnlocked(v.key);
+    $('#info-name').textContent = v.name; $('#info-desc').textContent = v.desc;
+    $('#big-lock').classList.toggle('hidden', unl);
+    const act = $('#info-action'); act.innerHTML = '';
+    if (!unl) {
+      const conf = pendingBuy === 'v:' + v.key;
+      const b = el('button', 'btn ' + (conf ? 'red' : 'green'), conf ? 'Sûr ? Clique encore !' : '🔓 Débloquer 🪙 ' + fmt(v.cost));
+      b.onclick = () => buyVehicle(v); act.appendChild(b);
+    } else if (save.selectedVehicle === v.key) act.appendChild(el('div', 'hud-box', '✔ Véhicule choisi'));
+    else { const b = el('button', 'btn blue', '✔ Choisir ce véhicule'); b.onclick = () => { FM.audio.sfx('click'); selectVehicle(v); }; act.appendChild(b); }
+  }
+
+  // grand aperçu animé (héros ou véhicule observé)
   function drawBig(t) {
     const cv = $('#big'), c = cv.getContext('2d');
     c.setTransform(2, 0, 0, 2, 0, 0); c.clearRect(0, 0, 290, 340);
     c.fillStyle = 'rgba(0,0,0,.28)'; c.beginPath(); c.ellipse(145, 318, 78, 15, 0, 0, Math.PI * 2); c.fill();
-    FM.drawChar(c, viewKey, viewOutfit, { x: 145, y: 318, size: 252, pose: 'idle', view: 'front', t });
+    if (wardrobeTab === 'hero') FM.drawChar(c, viewKey, viewOutfit, { x: 145, y: 318, size: 252, pose: 'idle', view: 'front', t });
+    else if (viewVehicle === 'none') FM.drawChar(c, save.selected, save.equipped[save.selected] || 0, { x: 145, y: 318, size: 252, pose: 'idle', view: 'front', t });
+    else FM.drawVehicle(c, viewVehicle, { x: 145, y: 318, size: 190, view: 'front', t });
   }
 
   function drawMenuHero(t) {
     const cv = $('#menu-hero'), c = cv.getContext('2d');
     c.setTransform(2, 0, 0, 2, 0, 0); c.clearRect(0, 0, 300, 360);
     c.fillStyle = 'rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(150, 338, 80, 15, 0, 0, Math.PI * 2); c.fill();
-    FM.drawChar(c, save.selected, save.equipped[save.selected] || 0, { x: 150, y: 336, size: 260, pose: 'idle', view: 'front', t });
+    if (save.selectedVehicle && save.selectedVehicle !== 'none') FM.drawVehicle(c, save.selectedVehicle, { x: 150, y: 336, size: 220, view: 'front', t });
+    else FM.drawChar(c, save.selected, save.equipped[save.selected] || 0, { x: 150, y: 336, size: 260, pose: 'idle', view: 'front', t });
   }
 
   function stepView(d) {
-    const i = Math.max(0, Math.min(FM.CHARS.length - 1, FM.CHARS.findIndex((c) => c.key === viewKey) + d));
-    FM.audio.sfx('click'); selectChar(FM.CHARS[i]);
-    const card = $('#cards').children[i]; if (card) card.scrollIntoView({ inline: 'center', block: 'nearest' });
+    if (wardrobeTab === 'hero') {
+      const i = Math.max(0, Math.min(FM.CHARS.length - 1, FM.CHARS.findIndex((c) => c.key === viewKey) + d));
+      FM.audio.sfx('click'); selectChar(FM.CHARS[i]);
+    } else {
+      const list = vehicleList(), i = Math.max(0, Math.min(list.length - 1, list.findIndex((v) => v.key === viewVehicle) + d));
+      FM.audio.sfx('click'); selectVehicle(list[i]);
+    }
+    scrollCarouselToViewing();
   }
 
   function openWardrobe() {
-    G.mode = 'wardrobe'; viewKey = save.selected; viewOutfit = save.equipped[viewKey] || 0; setPending(null);
+    G.mode = 'wardrobe'; wardrobeTab = 'hero'; viewKey = save.selected; viewOutfit = save.equipped[viewKey] || 0; viewVehicle = save.selectedVehicle || 'none'; setPending(null);
     showScreen('wardrobe'); buildWardrobe(); refreshCoins();
-    const i = FM.CHARS.findIndex((c) => c.key === viewKey), card = $('#cards').children[i];
-    if (card) { const cards = $('#cards'); cards.style.scrollBehavior = 'auto'; cards.scrollLeft = Math.max(0, card.offsetLeft - cards.clientWidth / 2 + 79); cards.style.scrollBehavior = ''; }
+    scrollCarouselToViewing();
   }
 
   // ---------- boutons ----------
@@ -580,6 +658,8 @@
   click('#btn-play', startGame);
   click('#btn-wardrobe', openWardrobe);
   click('#btn-wback', goMenu);
+  $('#tab-hero').onclick = () => switchTab('hero');
+  $('#tab-vehicle').onclick = () => switchTab('vehicle');
   click('#btn-wplay', startGame);
   click('#btn-pause', pauseGame);
   click('#btn-resume', resumeGame);
@@ -597,7 +677,7 @@
   click('#btn-wipe', () => {
     $('#screen-confirm').classList.add('hidden');
     FM.resetSave();
-    viewKey = save.selected; viewOutfit = 0; pendingBuy = null; coinsBanked = true;
+    viewKey = save.selected; viewOutfit = 0; viewVehicle = 'none'; wardrobeTab = 'hero'; pendingBuy = null; coinsBanked = true;
     FM.audio.applySettings(); if (save.music) FM.audio.startMusic(G.themeShown);
     resetMenuWorld(); refreshCoins(); refreshSound(); refreshMenuTag(); $('#menu-best').textContent = save.best;
     toast('Tout est effacé : on repart de zéro !');

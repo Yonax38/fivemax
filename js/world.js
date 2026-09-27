@@ -60,12 +60,7 @@
       const pl = G.player, sh = Math.max(0.35, 1 - pl.y * 0.12);
       drawShadow(pl.x, FM.K.PZ, sh, 1);
     }
-    for (const o of G.objs) {
-      if (o.gone || (o.type !== 'low' && o.type !== 'big')) continue;
-      const z = o.d - G.dist;
-      if (z > FM.K.ZFAR || z < 0.9) continue;
-      drawShadow(o.x, z, (o.w || 1.6) * 0.5, 0.8);
-    }
+    // (les obstacles n'ont plus d'ombre 2D : leur propre géométrie 3D et l'éclairage suffisent à les ancrer au sol)
     drawParticles(G);
     vignette();
   };
